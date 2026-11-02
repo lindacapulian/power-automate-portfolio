@@ -1,0 +1,1297 @@
+{
+  "name": "<flow-id>",
+  "id": "/providers/Microsoft.Flow/flows/<flow-id>",
+  "type": "Microsoft.Flow/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "Send Credit Notes Approval",
+    "definition": {
+      "metadata": {},
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "splitOn": "@triggerBody()['rows']",
+          "metadata": {
+            "operationMetadataId": "2c504c02-7e01-4306-9a5d-33b972e8459f"
+          },
+          "type": "Request",
+          "kind": "ApiConnection",
+          "inputs": {
+            "operationId": "GetItemHybridTriggerSchema",
+            "parameters": {
+              "dataset": "https://<tenant>.sharepoint.com/sites/<sitio-aprobacion-nc>",
+              "table": "Documents"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entity": {
+                        "properties": {},
+                        "type": "object",
+                        "required": []
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "rows"
+              ]
+            },
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+              },
+              "api": {
+                "runtimeUrl": "https://flow-apim-europe-001-northeurope-01.azure-apim.net/apim/sharepointonline"
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Get_files_(properties_only)": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "a1dadd2b-3e1b-40b9-8c59-674f052654c2"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://<tenant>.sharepoint.com/sites/<sitio-aprobacion-nc>",
+              "table": "<library-id>",
+              "folderPath": "/Shared Documents/General/2026"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetFileItems"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "List_rows_present_in_a_table": {
+          "runAfter": {
+            "Compose_12": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "tableId": "Table1",
+            "operationMetadataId": "82659b2f-4de1-4d87-b56e-7daec5d4e31a"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "groups/<group-id>",
+              "drive": "<drive-id>",
+              "file": "@last(outputs('Get_files_(properties_only)_1')?['body/value'])?['{Identifier}']",
+              "table": "Table1",
+              "extractSensitivityLabel": false,
+              "fetchSensitivityLabelMetadata": false
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "connectionName": "shared_excelonlinebusiness",
+              "operationId": "GetItems"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "List_rows_present_in_a_table_1": {
+          "runAfter": {
+            "Get_file_metadata_using_path": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6f297c0f-942a-409b-961f-fde6440aeac8",
+            "tableId": "YTD_2025"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "groups/<group-id>",
+              "drive": "<drive-id>",
+              "file": "@outputs('Get_file_metadata_using_path')?['body/Id']",
+              "table": "YTD_2025",
+              "extractSensitivityLabel": false,
+              "fetchSensitivityLabelMetadata": false
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "connectionName": "shared_excelonlinebusiness",
+              "operationId": "GetItems"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Send_an_email_(V2)": {
+          "runAfter": {
+            "Compose_7": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c84effc8-a08b-4521-af2a-802f57a59810"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "emailMessage/To": "<aprobador@empresa.com>",
+              "emailMessage/Subject": "@outputs('Compose_2')",
+              "emailMessage/Body": "<p class=\"editor-paragraph\"><span style=\"font-size: 16px;\">Estimados,</span><br><br><span style=\"font-size: 16px;\">Por favor considerar los siguientes documentos correspondientes a las Notas de Crédito revisadas en la semana. Agradeceremos tu conformidad para proceder con las mismas.</span><br><br><span style=\"font-size: 16px;\">Notas de Crédito: </span>@{concat('$ ', formatNumber(variables('varTotalMontoNCReal'), 'N2'))}<br><span style=\"font-size: 16px;\">Reactive Non-Storage: </span>@{outputs('Compose_10')}<br><span style=\"font-size: 16px;\">Importe por cobrar (Nuevas Facturas):</span>@{concat('$ ', formatNumber(variables('varTotalNuevaFactura'), 'N2'))}<br><br>@{outputs('Compose_8')}<br><br>@{outputs('Compose_14')}<br><br>@{outputs('Compose_17')}<br><br>@{outputs('Compose_15')}</p><p class=\"editor-paragraph\"><span style=\"font-size: 16px;\">Adjuntamos el detalle YTD de los montos de Notas de Crédito</span>@{outputs('Compose_7')}<br><br>@{body('Parse_JSON')?['html']}</p><br><p class=\"editor-paragraph\"><span style=\"font-size: 16px;\">Saludos Cordiales,</span></p>",
+              "emailMessage/Importance": "Normal"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2"
+            },
+            "authentication": {
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']",
+              "type": "Raw"
+            }
+          }
+        },
+        "Filter_array_2": {
+          "runAfter": {
+            "Get_files_(properties_only)": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "62748ebe-06f2-42be-94f9-d28a37be64ab"
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@outputs('Get_files_(properties_only)')?['body/value']",
+            "where": "@and(\r\n  equals(item()?['{IsFolder}'], true),\r\n  startsWith(item()?['{Name}'], 'WK ')\r\n)"
+          }
+        },
+        "Compose_5": {
+          "runAfter": {
+            "Compose": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c2766509-6dd4-4a23-9ad8-4c2ebe97333a"
+          },
+          "type": "Compose",
+          "inputs": "@last(outputs('Compose'))"
+        },
+        "Compose_6": {
+          "runAfter": {
+            "Compose_5": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "91a976ef-1eca-4bd5-8f53-d02e76b0b427"
+          },
+          "type": "Compose",
+          "inputs": "@outputs('Compose_5')?['{FullPath}']"
+        },
+        "Compose": {
+          "runAfter": {
+            "Select": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fe8695a5-83be-495c-af55-64707f0fbfd5"
+          },
+          "type": "Compose",
+          "inputs": "@sort(body('Filter_array_2'),'{Name}')"
+        },
+        "Get_files_(properties_only)_1": {
+          "runAfter": {
+            "Compose_13": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9d30055b-3005-415a-94c5-e0991b27e7ef"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://<tenant>.sharepoint.com/sites/<sitio-aprobacion-nc>",
+              "table": "<library-id>",
+              "folderPath": "@concat('/', outputs('Compose_5')?['{FullPath}'])"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetFileItems"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Get_file_metadata_using_path": {
+          "runAfter": {
+            "Condition_2": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "72208c96-0605-4fd9-884c-1e300bcf124e"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://<tenant>.sharepoint.com/sites/<sitio-aprobacion-nc>",
+              "path": "/Shared Documents/General/2026/YTD 2026.xlsm"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetFileMetadataByPath"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Create_sharing_link_for_a_file_or_folder": {
+          "runAfter": {
+            "Parse_JSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7dff9c1a-f7ee-468b-88a7-63b33b0ccdf0"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://<tenant>.sharepoint.com/sites/<sitio-aprobacion-nc>",
+              "table": "<library-id>",
+              "id": "@outputs('Get_file_metadata_using_path')?['body/ItemId']",
+              "permission/type": "view",
+              "permission/scope": "organization"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "CreateSharingLink"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Compose_2": {
+          "runAfter": {
+            "Create_sharing_link_for_a_file_or_folder_1": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1ca990b3-9564-4ad9-a2c5-009e3f29472d"
+          },
+          "type": "Compose",
+          "inputs": "@concat(outputs('Compose_1'),'.2026 - Credit Notes Approval')"
+        },
+        "Compose_3": {
+          "runAfter": {
+            "Compose_2": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e902fcad-823a-4f92-89cd-4476fa178b6d"
+          },
+          "type": "Compose",
+          "inputs": "@outputs('Get_files_(properties_only)_1')?['body/value'][0]['{Name}']"
+        },
+        "Compose_4": {
+          "runAfter": {
+            "Compose_8": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "83345a66-c0a8-47f7-b242-9a7dd6cdcb28"
+          },
+          "type": "Compose",
+          "inputs": "@outputs('Get_file_metadata_using_path')?['body/Name']"
+        },
+        "Compose_7": {
+          "runAfter": {
+            "Compose_4": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a2f32e00-4281-4795-8c81-9a7b54881120"
+          },
+          "type": "Compose",
+          "inputs": "\n<a href=\"@{outputs('Create_sharing_link_for_a_file_or_folder')?['body/link/webUrl']}\">\n    @{outputs('Get_file_metadata_using_path')?['body/Name']}\n</a>\n"
+        },
+        "Compose_8": {
+          "runAfter": {
+            "Compose_3": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "38f5b1b8-4ff3-4353-9f81-323451b9b4a3"
+          },
+          "type": "Compose",
+          "inputs": "\n<a href=\"@{outputs('Create_sharing_link_for_a_file_or_folder_1')?['body/link/webUrl']}\">\n   @{first(body('Filter_array_1'))?['{Name}']}\n</a>"
+        },
+        "Compose_9": {
+          "runAfter": {
+            "Run_script": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3645c3a3-cbc3-462b-9b01-060cf93d3fe7"
+          },
+          "type": "Compose",
+          "inputs": "@outputs('Run_script')?['body/result']"
+        },
+        "Create_sharing_link_for_a_file_or_folder_1": {
+          "runAfter": {
+            "Create_sharing_link_for_a_file_or_folder": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "766ae2d8-04eb-4b9e-ad28-8a9438f498d6"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://<tenant>.sharepoint.com/sites/<sitio-aprobacion-nc>",
+              "table": "<library-id>",
+              "id": "@outputs('Compose_12')",
+              "permission/type": "view",
+              "permission/scope": "organization"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "CreateSharingLink"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Select": {
+          "runAfter": {
+            "Filter_array_2": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "25f8e5dd-16f6-42a1-9ac9-16920aaf9e25"
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Filter_array_2')",
+            "select": {
+              "Name": "@{item()?['{Name}']}",
+              "ID": "@item()?['ID']",
+              "WkNum": "@{int(last(split(item()?['{Name}'],' ')))}",
+              "FullPath": "@{item()?['{FullPath}']}"
+            }
+          }
+        },
+        "Compose_12": {
+          "runAfter": {
+            "Filter_array_1": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "256777aa-2c5a-42c7-bbeb-66ae3aaa84a4"
+          },
+          "type": "Compose",
+          "inputs": "@first(body('Filter_array_1'))?['ID']"
+        },
+        "Filter_array_1": {
+          "runAfter": {
+            "Get_files_(properties_only)_1": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b4583f9f-d631-4853-b9b4-e1aef5811bee"
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@outputs('Get_files_(properties_only)_1')?['body/value']",
+            "where": "@and(\n  equals(item()?['{IsFolder}'], false),\n  endsWith(item()?['{FilenameWithExtension}'], '.xlsx')\n)"
+          }
+        },
+        "Compose_13": {
+          "runAfter": {
+            "Compose_6": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f7031ae2-42bd-4192-82f4-629eeb0a8537"
+          },
+          "type": "Compose",
+          "inputs": "@outputs('Compose_5')?['ID']"
+        },
+        "Parse_JSON": {
+          "runAfter": {
+            "Compose_9": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f0e1c955-20e6-4bb2-90b0-92a37a80ab49"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@outputs('Compose_9')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "html": {
+                  "type": "string"
+                },
+                "totals": {
+                  "type": "object",
+                  "properties": {
+                    "reactiveNonStorageNC": {
+                      "type": "string"
+                    },
+                    "grandTotalNewInvoice": {
+                      "type": "string"
+                    },
+                    "grandTotalAmountNC": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Compose_1": {
+          "runAfter": {
+            "Compose_14": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "57b6ab26-b1e2-4f97-aae2-4ded054ae29a"
+          },
+          "type": "Compose",
+          "inputs": "@outputs('Compose_5')?['{Name}']"
+        },
+        "Select_1": {
+          "runAfter": {
+            "Filter_array_3": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "efd623a5-56e3-4946-8b5f-cff991240ff7"
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Filter_array_3')",
+            "select": {
+              "CASO": "@item()?['CASO']",
+              "FACTURAS": "@item()?['FACTURAS']",
+              "DRAFT": "@string(coalesce(item()?['_x0023_ DRAFT'], item()?['_x0023__x0020_DRAFT'], item()?['# DRAFT'], item()?['DRAFT']))",
+              "TIPO DE CARGA": "@item()?['TIPO DE CARGA']",
+              "TIPO DE INCIDENTE": "@item()?['TIPO DE INCIDENTE']",
+              "TIPO DE FACTURA": "@item()?['TIPO DE FACTURA ']",
+              "SUSTENTO DEL CASO": "@item()?['SUSTENTO DEL CASO ']",
+              "IMPORTE FACTURA": "@float(if(or(equals(item()?['IMPORTE FACTURA'], null), equals(trim(string(item()?['IMPORTE FACTURA'])), ''), equals(trim(string(item()?['IMPORTE FACTURA'])), '-')), 0, if(and(contains(string(item()?['IMPORTE FACTURA']), ','), contains(string(item()?['IMPORTE FACTURA']), '.')), replace(replace(replace(trim(string(item()?['IMPORTE FACTURA'])), 'S/',''), '$',''), ',', ''), replace(replace(replace(trim(string(item()?['IMPORTE FACTURA'])), 'S/',''), '$',''), ',', '.'))))",
+              "IMPORTE NOTA DE CREDITO": "@float(if(or(equals(item()?['IMPORTE NC'], null), equals(trim(string(item()?['IMPORTE NC'])), ''), equals(trim(string(item()?['IMPORTE NC'])), '-')), 0, if(and(contains(string(item()?['IMPORTE NC']), ','), contains(string(item()?['IMPORTE NC']), '.')), replace(replace(replace(trim(string(item()?['IMPORTE NC'])), 'S/',''), '$',''), ',', ''), replace(replace(replace(trim(string(item()?['IMPORTE NC'])), 'S/',''), '$',''), ',', '.'))))",
+              "IMPORTE NUEVA FACTURA": "@float(if(or(equals(item()?['MONTO FACTURA NUEVA'], null), equals(trim(string(item()?['MONTO FACTURA NUEVA'])), ''), equals(trim(string(item()?['MONTO FACTURA NUEVA'])), '-')), 0, if(and(contains(string(item()?['MONTO FACTURA NUEVA']), ','), contains(string(item()?['MONTO FACTURA NUEVA']), '.')), replace(replace(replace(trim(string(item()?['MONTO FACTURA NUEVA'])), 'S/',''), '$',''), ',', ''), replace(replace(replace(trim(string(item()?['MONTO FACTURA NUEVA'])), 'S/',''), '$',''), ',', '.'))))",
+              "MONTO NC REAL": "@sub( float(if(or(equals(item()?['IMPORTE NC'], null), equals(trim(string(item()?['IMPORTE NC'])), ''), equals(trim(string(item()?['IMPORTE NC'])), '-')), 0, if(and(contains(string(item()?['IMPORTE NC']), ','), contains(string(item()?['IMPORTE NC']), '.')), replace(replace(replace(trim(string(item()?['IMPORTE NC'])), 'S/',''), '$',''), ',', ''), replace(replace(replace(trim(string(item()?['IMPORTE NC'])), 'S/',''), '$',''), ',', '.')))), float(if(or(equals(item()?['MONTO FACTURA NUEVA'], null), equals(trim(string(item()?['MONTO FACTURA NUEVA'])), ''), equals(trim(string(item()?['MONTO FACTURA NUEVA'])), '-')), 0, if(and(contains(string(item()?['MONTO FACTURA NUEVA']), ','), contains(string(item()?['MONTO FACTURA NUEVA']), '.')), replace(replace(replace(trim(string(item()?['MONTO FACTURA NUEVA'])), 'S/',''), '$',''), ',', ''), replace(replace(replace(trim(string(item()?['MONTO FACTURA NUEVA'])), 'S/',''), '$',''), ',', '.')))) )"
+            }
+          }
+        },
+        "Create_HTML_table": {
+          "runAfter": {
+            "Apply_to_each": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a3699b53-f98b-4565-aa9b-7e3a62c1b924"
+          },
+          "type": "Table",
+          "inputs": {
+            "from": "@body('Select_1')",
+            "format": "HTML",
+            "columns": [
+              {
+                "header": "CASO",
+                "value": "@item()?['CASO']"
+              },
+              {
+                "header": "FACTURAS",
+                "value": "@item()?['FACTURAS']"
+              },
+              {
+                "header": "# DRAFT",
+                "value": "@item()?['DRAFT']"
+              },
+              {
+                "header": "TIPO DE CARGA",
+                "value": "@item()?['TIPO DE CARGA']"
+              },
+              {
+                "header": "TIPO DE INCIDENTE",
+                "value": "@item()?['TIPO DE INCIDENTE']"
+              },
+              {
+                "header": "TIPO DE FACTURA",
+                "value": "@item()?['TIPO DE FACTURA']"
+              },
+              {
+                "header": "SUSTENTO DEL CASO",
+                "value": "@item()?['SUSTENTO DEL CASO']"
+              },
+              {
+                "header": "IMPORTE FACTURA",
+                "value": "@formatNumber(float(coalesce(item()?['IMPORTE FACTURA'], 0)), 'N2')"
+              },
+              {
+                "header": "IMPORTE NOTA DE CREDITO",
+                "value": "@formatNumber(float(coalesce(item()?['IMPORTE NOTA DE CREDITO'], 0)), 'N2')"
+              },
+              {
+                "header": "IMPORTE NUEVA FACTURA",
+                "value": "@formatNumber(float(coalesce(item()?['IMPORTE NUEVA FACTURA'], 0)), 'N2')"
+              },
+              {
+                "header": "MONTO NC REAL",
+                "value": "@formatNumber(float(coalesce(item()?['MONTO NC REAL'], 0)), 'N2')"
+              }
+            ]
+          }
+        },
+        "Compose_14": {
+          "runAfter": {
+            "Create_HTML_table": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "53c6c902-e51a-4229-a41f-d1e50e59cc06"
+          },
+          "type": "Compose",
+          "inputs": "\n<style>\n  table {\n    border-collapse: collapse;\n    font-family: Segoe UI, Arial, sans-serif;\n    font-size: 12px;\n    width: 100%;\n  }\n  th, td {\n    border: 1px solid #ddd;\n    padding: 6px 8px;\n    vertical-align: middle;\n  }\n  th {\n    background: #f3a347;\n    color: #fff;\n    text-align: left;\n  }\n  .grand-total-row td {\n    background: #fff4e6;\n    font-weight: bold;\n    border-top: 2px solid #f3a347;\n  }\n</style>\n\n@{replace(replace(\r\n  body('Create_HTML_table'),'<td>',\r\n        '<td style=\"text-align: right; padding: 5px; border: 1px solid #ddd;\">'\r\n    ),\r\n  '</table>',\r\n  concat(\r\n    '<tr class=\"grand-total-row\">',\r\n      '<td colspan=\"7\" style=\"text-align:right;\">Grand Total</td>',\r\n      '<td style=\"text-align:right;\">$ ', formatNumber(variables('varTotalImporteFactura'), 'N2'), '</td>',\r\n      '<td style=\"text-align:right;\">$ ', formatNumber(variables('varTotalNC'), 'N2'), '</td>',\r\n      '<td style=\"text-align:right;\">$ ', formatNumber(variables('varTotalNuevaFactura'), 'N2'), '</td>',\r\n      '<td style=\"text-align:right;\">$ ', formatNumber(variables('varTotalMontoNCReal'), 'N2'), '</td>',\r\n    '</tr></table>'\r\n  ))\r\n}\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        "Initialize_variable": {
+          "runAfter": {
+            "Select_1": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "baf28934-3918-4d40-8ebf-a58e817c6b43"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalImporteFactura",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Initialize_variable_1": {
+          "runAfter": {
+            "Initialize_variable": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "12b06c3a-375e-4fc3-84e2-aa7c336a3a1c"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalNC",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Initialize_variable_2": {
+          "runAfter": {
+            "Initialize_variable_1": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "50580a87-1661-4379-bab6-36c3c0666d0d"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalNuevaFactura",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Initialize_variable_3": {
+          "runAfter": {
+            "Initialize_variable_2": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "491675f2-0d77-4d4b-8965-d78db6fe473a"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalMontoNCReal",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Apply_to_each": {
+          "foreach": "@body('Select_1')",
+          "actions": {
+            "Increment_variable": {
+              "metadata": {
+                "operationMetadataId": "84241e2e-0f0b-42bf-ac50-6ac34e3e288a"
+              },
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "varTotalImporteFactura",
+                "value": "@float(items('Apply_to_each')?['IMPORTE FACTURA'])"
+              }
+            },
+            "Increment_variable_1": {
+              "runAfter": {
+                "Increment_variable": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "7b9129ae-481b-4ffa-bbec-99c6d9f9c82f"
+              },
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "varTotalNC",
+                "value": "@float(items('Apply_to_each')?['IMPORTE NOTA DE CREDITO'])"
+              }
+            },
+            "Increment_variable_2": {
+              "runAfter": {
+                "Increment_variable_1": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "77b550e4-3eac-4589-b1fc-b7f2f42f5587"
+              },
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "varTotalNuevaFactura",
+                "value": "@float(items('Apply_to_each')?['IMPORTE NUEVA FACTURA'])"
+              }
+            },
+            "Increment_variable_3": {
+              "runAfter": {
+                "Increment_variable_2": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "6a8b6689-9a99-44b2-b443-a025b22ee8fb"
+              },
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "varTotalMontoNCReal",
+                "value": "@float(items('Apply_to_each')?['MONTO NC REAL'])"
+              }
+            },
+            "Condition_1": {
+              "actions": {
+                "Increment_variable_4": {
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "varTotalReactiveNonStorage",
+                    "value": "@item()?['IMPORTE NOTA DE CREDITO']"
+                  }
+                }
+              },
+              "runAfter": {
+                "Increment_variable_3": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {}
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@toLower(trim(string(item()?['TIPO DE INCIDENTE'])))",
+                      "reactive"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@toLower(trim(string(item()?['TIPO DE FACTURA'])))",
+                      "non storage"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Initialize_variable_5": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "35942453-14b0-426b-8f0d-498f456427ee"
+          },
+          "type": "Foreach"
+        },
+        "Filter_array_3": {
+          "runAfter": {
+            "List_rows_present_in_a_table": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b5105a99-17ca-4eb7-a4d6-4d3ae57238b2"
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@outputs('List_rows_present_in_a_table')?['body/value']",
+            "where": "@and(\n  not(empty(item()?['CASO'])),\n  empty(item()?['OBSERVACIONES'])\n)"
+          }
+        },
+        "Run_script": {
+          "runAfter": {
+            "Compose_11": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "tableId": {},
+            "operationMetadataId": "fcce1acb-cd54-4c20-a42e-96063827215d"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "groups/<group-id>",
+              "drive": "<drive-id>",
+              "file": "<file-id>",
+              "scriptId": "<office-script-id>",
+              "ScriptParameters/rows": "@outputs('List_rows_present_in_a_table_1')?['body/value']",
+              "ScriptParameters/incidentCol": "Incident Type",
+              "ScriptParameters/invoiceTypeCol": "Invoice Type",
+              "ScriptParameters/amountCol": "Amount",
+              "ScriptParameters/newInvCol": "Monto_Nueva_Factura",
+              "ScriptParameters/orderIncident": [
+                "Proactive",
+                "Reactive"
+              ],
+              "ScriptParameters/orderInvoice": [
+                "Non storage",
+                "Storage"
+              ]
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "connectionName": "shared_excelonlinebusiness",
+              "operationId": "RunScriptProd"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Leer_Tabla24": {
+          "runAfter": {
+            "Compose_10": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e1ec07eb-d09b-4e90-ba07-24bf7fb56bf1",
+            "tableId": "Table24"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "groups/<group-id>",
+              "drive": "<drive-id>",
+              "file": "@last(outputs('Get_files_(properties_only)_1')?['body/value'])?['{Identifier}']",
+              "table": "Table24"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "connectionName": "shared_excelonlinebusiness",
+              "operationId": "GetItems"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Condition": {
+          "actions": {
+            "Set_variable": {
+              "runAfter": {
+                "Compose_15": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9f4c88e8-0e6b-4a06-a732-4ded6cadbf08"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varTabla24HTML",
+                "value": "@outputs('Compose_15')"
+              }
+            },
+            "Compose_15": {
+              "runAfter": {
+                "Create_HTML_table_1": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "99fdf8d5-9585-48ff-8b49-889b3e31e699"
+              },
+              "type": "Compose",
+              "inputs": "<div class=\"tabla24\">\n\n  <p style=\"font-family: Arial, sans-serif; font-size: 16px; color: #333;\">\n\n    Se revisaron resoluciones finales de Ositran por un importe de @{concat('$',outputs('SumaTotalNC'))}:\n\n  </p>\n\n  @{replace(replace(body('Create_HTML_table_1'), '<td>', '<td style=\"padding: 5px; text-align: right; border: 1px solid #ddd;\">'), '</table>', concat('<tr style=\"background-color: #fff4e6; font-weight: bold;\">','<td colspan=\"7\" style=\"text-align: right; padding: 5px;\">Total </td>','<td style=\"text-align: right; padding: 5px;\">$ ', string(outputs('SumaTotalNC')), '</td>','<td colspan=\"6\"></td>','</tr></table>'))}"
+            },
+            "Create_HTML_table_1": {
+              "runAfter": {
+                "SumaTotalNC": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Table",
+              "inputs": {
+                "from": "@body('Filter_array_4')",
+                "format": "HTML",
+                "columns": [
+                  {
+                    "header": "Código Reclamo",
+                    "value": "@item()?['Codigo Reclamo']"
+                  },
+                  {
+                    "header": "Exp OSITRAN",
+                    "value": "@item()?['Exp OSITRAN']"
+                  },
+                  {
+                    "header": "Facturas",
+                    "value": "@item()?['Facturas']"
+                  },
+                  {
+                    "header": "Razon_Social",
+                    "value": "@item()?['Razon_Social']"
+                  },
+                  {
+                    "header": "Status",
+                    "value": "@item()?['Status']"
+                  },
+                  {
+                    "header": "Importe Fac",
+                    "value": "@if(empty(item()?['Importe Fac']), 0, formatNumber(float(replace(replace(replace(string(item()?['Importe Fac']), '$', ''), ',', ''), ' ', '')), 'N2'))"
+                  },
+                  {
+                    "header": "N_Draft",
+                    "value": "@item()?['N_Draft']\r\n"
+                  },
+                  {
+                    "header": "Importe_NC",
+                    "value": "@if(empty(item()?['Importe_NC']), 0, formatNumber(float(replace(replace(replace(string(item()?['Importe_NC']), '$', ''), ',', ''), ' ', '')), 'N2'))"
+                  },
+                  {
+                    "header": "Monto_Nueva_Fac",
+                    "value": "@if(empty(item()?['Monto_Nueva_Fac']), 0, formatNumber(float(replace(replace(replace(string(item()?['Monto_Nueva_Fac']), '$', ''), ',', ''), ' ', '')), 'N2'))"
+                  },
+                  {
+                    "header": "Tipo_Carga2",
+                    "value": "@item()?['Tipo_Carga2']"
+                  },
+                  {
+                    "header": "Storage",
+                    "value": "@item()?['Storage']\r\n"
+                  },
+                  {
+                    "header": "Detalle",
+                    "value": "@item()?['Detalle']"
+                  },
+                  {
+                    "header": "Obs",
+                    "value": "@item()?['Obs']"
+                  },
+                  {
+                    "header": "Responsable",
+                    "value": "@item()?['Responsable']"
+                  }
+                ]
+              }
+            },
+            "Select_2": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_array_4')",
+                "select": "@if(empty(item()?['Importe_NC']), 0, float(replace(replace(item()?['Importe_NC'], '$', ''), ',', '')))"
+              }
+            },
+            "SumaTotalNC": {
+              "runAfter": {
+                "Select_2": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@\r\nformatNumber(\r\n    float(\r\n        coalesce(\r\n            xpath(\r\n                xml(\r\n                    json(\r\n                        concat('{\"root\":{\"f\":', body('Select_2'), '}}')\r\n                    )\r\n                ),\r\n                'sum(/root/f)'\r\n            ),\r\n            0\r\n        )\r\n    ),\r\n'N2', 'en-US'\r\n)\r\n"
+            }
+          },
+          "runAfter": {
+            "Filter_array_4": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {}
+          },
+          "expression": {
+            "and": [
+              {
+                "greater": [
+                  "@length(body('Filter_array_4'))",
+                  0
+                ]
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "38430877-3083-4b73-9b57-69fa251fef49"
+          },
+          "type": "If"
+        },
+        "Filter_array_4": {
+          "runAfter": {
+            "Initialize_variable_4": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Leer_Tabla24')?['value']",
+            "where": "@not(empty(item()?['Codigo Reclamo']))"
+          }
+        },
+        "Initialize_variable_4": {
+          "runAfter": {
+            "Leer_Tabla24": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0324d004-e62a-42de-bebd-a212d7ab0f4d"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTabla24HTML",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Compose_10": {
+          "runAfter": {
+            "Compose_1": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@concat('$ ', formatNumber(variables('varTotalReactiveNonStorage'), 'N2'))"
+        },
+        "Initialize_variable_5": {
+          "runAfter": {
+            "Initialize_variable_3": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalReactiveNonStorage",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "List_rows_present_in_a_table_(Leer_Tabla36)": {
+          "runAfter": {
+            "Condition": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "groups/<group-id>",
+              "drive": "<drive-id>",
+              "file": "@last(outputs('Get_files_(properties_only)_1')?['body/value'])?['{Identifier}']",
+              "table": "Table36"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "connectionName": "shared_excelonlinebusiness",
+              "operationId": "GetItems"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Filter_array": {
+          "runAfter": {
+            "Initialize_variable_6": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('List_rows_present_in_a_table_(Leer_Tabla36)')?['value']",
+            "where": "@not(empty(item()?['No_x002e_ CASE']))"
+          }
+        },
+        "Condition_2": {
+          "actions": {
+            "Select_3": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_array')",
+                "select": "@if(empty(item()?['AMOUNT $']), 0, float(replace(replace(item()?['AMOUNT $'], '$', ''), ',', '')))"
+              }
+            },
+            "SumaTotalamount$": {
+              "runAfter": {
+                "Select_3": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "\n@{\r\nformatNumber(\r\n    float(\r\n        coalesce(\r\n            xpath(\r\n                xml(\r\n                    json(\r\n                        concat('{\"root\":{\"f\":', body('Select_3'), '}}')\r\n                    )\r\n                ),\r\n                'sum(/root/f)'\r\n            ),\r\n            0\r\n        )\r\n    ),\r\n'N2', 'en-US'\r\n)\r\n}"
+            },
+            "Select_4": {
+              "runAfter": {
+                "SumaTotalamount$": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_array')",
+                "select": "@if(\r\n  empty(item()?['AMOUNT S/_x002e_']),\r\n  0,\r\n  float(\r\n    replace(\r\n      replace(\r\n        replace(\r\n          replace(\r\n            item()?['AMOUNT S/_x002e_'],\r\n            'S/. ',\r\n            ''\r\n          ),\r\n          'S/.',\r\n          ''\r\n        ),\r\n        'S/',\r\n        ''\r\n      ),\r\n      ',',\r\n      ''\r\n    )\r\n  )\r\n)"
+              }
+            },
+            "SumaTotalamountS": {
+              "runAfter": {
+                "Select_4": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@\r\nformatNumber(\r\n    float(\r\n        coalesce(\r\n            xpath(\r\n                xml(\r\n                    json(\r\n                        concat('{\"root\":{\"f\":', body('Select_4'), '}}')\r\n                    )\r\n                ),\r\n                'sum(/root/f)'\r\n            ),\r\n            0\r\n        )\r\n    ),\r\n'N2', 'en-US'\r\n)\r\n"
+            },
+            "Create_HTML_table_2": {
+              "runAfter": {
+                "SumaTotalamountS": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Table",
+              "inputs": {
+                "from": "@body('Filter_array')",
+                "format": "HTML",
+                "columns": [
+                  {
+                    "header": "WK",
+                    "value": "@item()?['WK']"
+                  },
+                  {
+                    "header": "No. CASE",
+                    "value": "@item()?['No_x002e_ CASE']"
+                  },
+                  {
+                    "header": "INVOICE",
+                    "value": "@item()?['INVOICE']"
+                  },
+                  {
+                    "header": "DRAFT",
+                    "value": "@item()?['DRAFT']"
+                  },
+                  {
+                    "header": "Customer",
+                    "value": "@item()?['Customer']"
+                  },
+                  {
+                    "header": "AMOUNT $",
+                    "value": "@if(empty(item()?['AMOUNT $']), 0, formatNumber(float(replace(replace(replace(string(item()?['AMOUNT $']), '$', ''), ',', ''), ' ', '')), 'N2'))"
+                  },
+                  {
+                    "header": "AMOUNT S/.",
+                    "value": "@if(empty(item()?['AMOUNT S/_x002e_']), 0, formatNumber(float(replace(replace(replace(string(item()?['AMOUNT S/_x002e_']), '$', ''), ',', ''), ' ', '')), 'N2'))"
+                  },
+                  {
+                    "header": "Detail",
+                    "value": "@item()?['Detail']"
+                  },
+                  {
+                    "header": "CX Responsable",
+                    "value": "@item()?['CX Responsable']"
+                  },
+                  {
+                    "header": "Estado",
+                    "value": "@item()?['Estado']"
+                  },
+                  {
+                    "header": "Área Responsable",
+                    "value": "@item()?['Área Responsable']"
+                  }
+                ]
+              }
+            },
+            "Set_variable_1": {
+              "runAfter": {
+                "Compose_17": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varTabla36HTML",
+                "value": "@outputs('Compose_17')"
+              }
+            },
+            "Compose_17": {
+              "runAfter": {
+                "Create_HTML_table_2": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "<div class=\"tabla36\">\n\n  <p style=\"font-family: Arial, sans-serif; font-size: 16px; color: #333;\">\n\n    Se revisaron Transacciones Extrajudiciales por un importe total de @{concat('$', outputs('SumaTotalamount$'))} y @{concat('S/', outputs('SumaTotalamountS'))}\n\n  </p>\n\n  @{replace(\r\n    replace(\r\n        body('Create_HTML_table_2'),\r\n        '<td>',\r\n        '<td style=\"text-align: right; padding: 5px; border: 1px solid #ddd;\">'\r\n    ),\r\n    '</table>',\r\n    concat(\r\n        '<tr style=\"background-color: #fff4e6; font-weight: bold;\">',\r\n        '<td colspan=\"5\" style=\"text-align: right; padding: 5px;\">Total </td>',\r\n        '<td style=\"text-align: right; padding: 5px;\">$ ', outputs('SumaTotalamount$'), '</td>',\r\n        '<td style=\"text-align: right; padding: 5px;\">S/ ', outputs('SumaTotalamountS'), '</td>',\r\n        '<td colspan=\"5\"></td>',\r\n        '</tr></table>'\r\n    )\r\n)}"
+            }
+          },
+          "runAfter": {
+            "Filter_array": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {}
+          },
+          "expression": {
+            "and": [
+              {
+                "greater": [
+                  "@length(body('Filter_array'))",
+                  0
+                ]
+              }
+            ]
+          },
+          "type": "If"
+        },
+        "Initialize_variable_6": {
+          "runAfter": {
+            "List_rows_present_in_a_table_(Leer_Tabla36)": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTabla36HTML",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Compose_11": {
+          "runAfter": {
+            "List_rows_present_in_a_table_1": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@length(outputs('List_rows_present_in_a_table_1')?['body/value'])"
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "connectionName": "<conexion-sharepointonline>",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "tier": "NotSpecified",
+        "apiName": "sharepointonline",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      },
+      "shared_excelonlinebusiness": {
+        "connectionName": "<conexion-excelonlinebusiness>",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+        "tier": "NotSpecified",
+        "apiName": "excelonlinebusiness",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      },
+      "shared_office365": {
+        "connectionName": "<conexion-office365>",
+        "source": "Invoker",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "tier": "NotSpecified",
+        "apiName": "office365",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      }
+    },
+    "flowFailureAlertSubscribed": false,
+    "isManaged": false
+  }
+}
