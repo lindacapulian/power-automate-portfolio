@@ -1,0 +1,39 @@
+# =====================================================================
+# Flujo: Reporte de cliente automatizado con envío en un clic
+# Herramienta: Power Automate Desktop
+# Versión pública: servidores, rutas, correos y nombres reemplazados
+# por marcadores <...>. Se omitió el repositorio de controles (selectores
+# de UI), por lo que debes volver a capturar los elementos web al importarlo.
+# =====================================================================
+
+WebAutomation.LaunchEdge.LaunchEdge Url: $fx'http://<servidor-power-bi>/reports/powerbi/<Carpeta>/<Dashboard de volumen>' WindowState: WebAutomation.BrowserWindowState.Maximized ClearCache: False ClearCookies: False WaitForPageToLoadTimeout: $fx'100' Timeout: $fx'100' PiPUserDataFolderMode: WebAutomation.PiPUserDataFolderModeEnum.AutomaticProfile TargetDesktop: $fx'{"DisplayName":"Equipo local","Route":{"ServerType":"Local","ServerAddress":""},"DesktopType":"local"}' BrowserInstance=> Browser
+@@copilotNextBestAction: 'True'
+WebAutomation.Click.Click BrowserInstance: $fx'=Browser' Control: appmask['Web Page \'h ... Dashboard\'']['Div \'CLIENTE\''] ClickType: WebAutomation.ClickType.LeftClick MouseClick: True WaitForPageToLoadTimeout: $fx'=60' MousePositionRelativeToElement: WebAutomation.RectangleEdgePoint.MiddleCenter OffsetX: $fx'=0' OffsetY: $fx'=0'
+WebAutomation.Click.Click BrowserInstance: $fx'=Browser' Control: appmask['Web Page \'h ... Dashboard\'']['Span \'Dry\' 2'] ClickType: WebAutomation.ClickType.LeftClick MouseClick: True WaitForPageToLoadTimeout: $fx'60' MousePositionRelativeToElement: WebAutomation.RectangleEdgePoint.MiddleCenter OffsetX: $fx'0' OffsetY: $fx'0'
+WebAutomation.Click.Click BrowserInstance: $fx'=Browser' Control: appmask['Web Page \'h ... Dashboard\'']['Div 2'] ClickType: WebAutomation.ClickType.RightClick MouseClick: True WaitForPageToLoadTimeout: $fx'60' MousePositionRelativeToElement: WebAutomation.RectangleEdgePoint.MiddleCenter OffsetX: $fx'0' OffsetY: $fx'0'
+WebAutomation.Click.Click BrowserInstance: $fx'=Browser' Control: appmask['Web Page \'h ... Dashboard\'']['Heading 6 \'Show as a table\''] ClickType: WebAutomation.ClickType.LeftClick MouseClick: True WaitForPageToLoadTimeout: $fx'60' MousePositionRelativeToElement: WebAutomation.RectangleEdgePoint.MiddleCenter OffsetX: $fx'0' OffsetY: $fx'0'
+WebAutomation.Click.Click BrowserInstance: $fx'=Browser' Control: appmask['Web Page \'h ... Dashboard\'']['Idiomatic text 2'] ClickType: WebAutomation.ClickType.LeftClick MouseClick: True WaitForPageToLoadTimeout: $fx'60' MousePositionRelativeToElement: WebAutomation.RectangleEdgePoint.MiddleCenter OffsetX: $fx'0' OffsetY: $fx'0'
+WebAutomation.Click.Click BrowserInstance: $fx'=Browser' Control: appmask['Web Page \'h ... Dashboard\'']['Div \'Export data\' 2'] ClickType: WebAutomation.ClickType.LeftClick MouseClick: True WaitForPageToLoadTimeout: $fx'60' MousePositionRelativeToElement: WebAutomation.RectangleEdgePoint.MiddleCenter OffsetX: $fx'0' OffsetY: $fx'0'
+WebAutomation.Click.Click BrowserInstance: $fx'=Browser' Control: appmask['Web Page \'h ... Dashboard\'']['Button \'Export\''] ClickType: WebAutomation.ClickType.LeftClick MouseClick: True WaitForPageToLoadTimeout: $fx'60' MousePositionRelativeToElement: WebAutomation.RectangleEdgePoint.MiddleCenter OffsetX: $fx'0' OffsetY: $fx'0'
+WAIT 5
+Folder.GetFiles Folder: $fx'C:\\Users\\<usuario>\\Downloads' FileFilter: $fx'*.xlsx' IncludeSubfolders: False FailOnAccessDenied: True SortBy1: Folder.SortBy.CreationTime SortDescending1: True SortBy2: Folder.SortBy.NoSort SortDescending2: False SortBy3: Folder.SortBy.NoSort SortDescending3: False Files=> Files
+SET LatestFile TO Files[0]
+Excel.LaunchExcel.LaunchAndOpenUnderExistingProcess Path: $fx'C:\\Users\\<usuario>\\Documents\\Reporte_Cliente.xlsm' Visible: True ReadOnly: False UseMachineLocale: False Instance=> ExcelInstance
+Excel.RunMacro Instance: ExcelInstance Macro: $'''ProcesarReporte; %LatestFile%'''
+Excel.CloseExcel.CloseAndSave Instance: ExcelInstance
+Outlook.Launch Instance=> OutlookInstance
+DateTime.GetCurrentDateTime.Local DateTimeFormat: DateTime.DateTimeFormat.DateOnly CurrentDateTime=> CurrentDateTime
+Text.ConvertDateTimeToText.FromDateTime DateTime: $fx'=CurrentDateTime' StandardFormat: Text.WellKnownDateTimeFormat.ShortDate Result=> FormattedDateTime
+SET CUERPOCORREO TO $fx'<table align="center" width="600" style="font-family: Segoe UI, sans-serif; border-collapse: collapse;">
+    <tr><td style="padding: 30px; background-color: #3c3c46; color: #ffffff; text-align: center;"><h2 style="margin: 0;">Reporte de Cliente</h2></td></tr>
+    <tr><td style="padding: 30px; color: #555555; font-size: 15px; line-height: 1.6;">
+        <p>Buenas tardes, equipo:</p>
+        <p>Comparto el <strong>reporte del cliente actualizado a la fecha</strong>.</p>
+        <p>• Archivo adjunto: Reporte_Cliente.xlsm</p>
+        <p>Quedo atenta a cualquier consulta.</p>
+        <p><strong>[Nombre]</strong><br>[Área] | [Empresa]</p>
+    </td></tr>
+</table>'
+Outlook.SendEmailThroughOutlook.SendEmail Instance: $fx'=OutlookInstance' Account: $fx'<tu.correo@empresa.com>' SendTo: $fx'<destinatario1@empresa.com>; <destinatario2@empresa.com>' Subject: $fx'REPORTE CLIENTE - ${FormattedDateTime}' Body: $fx'=CUERPOCORREO' IsBodyHtml: True IsDraft: False Attachments: $fx'C:\\Users\\<usuario>\\Documents\\Reporte_Cliente.xlsm'
+WAIT 5
+Outlook.Close Instance: OutlookInstance
