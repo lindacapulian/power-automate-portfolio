@@ -1,0 +1,369 @@
+{
+  "name": "<flow-id>",
+  "id": "/providers/Microsoft.Flow/flows/<flow-id>",
+  "type": "Microsoft.Flow/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "Enlace cumplañero",
+    "definition": {
+      "metadata": {},
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "frequency": "Day",
+            "interval": "1",
+            "startTime": "2026-02-04T13:00:00.000Z"
+          },
+          "evaluatedRecurrence": {
+            "frequency": "Day",
+            "interval": "1",
+            "startTime": "2026-02-04T13:00:00.000Z"
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "Initialize_variable_Correo_3_días": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Fecha3Dias",
+                "type": "string",
+                "value": "@formatDateTime(addDays(utcNow(),3),'MM-dd')"
+              }
+            ]
+          }
+        },
+        "Apply_to_each": {
+          "foreach": "@outputs('List_rows_present_in_a_table')?['body/value']",
+          "actions": {
+            "Compose_FechaCumple": {
+              "type": "Compose",
+              "inputs": "@if(\n    not(empty(trim(items('Apply_to_each')?['Cumpleaños']))),\n    formatDateTime(addDays('1899-12-30', int(trim(items('Apply_to_each')?['Cumpleaños']))),'MM-dd'),\n    ''\n)"
+            },
+            "Condition": {
+              "actions": {
+                "Apply_to_each_EquipoHoy": {
+                  "foreach": "@outputs('List_rows_present_in_a_table')?['body/value']",
+                  "actions": {
+                    "condition1": {
+                      "actions": {
+                        "Append_to_string_variable": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "CorreosEquipo",
+                            "value": "@concat(trim(items('Apply_to_each_EquipoHoy')?['Correo']), ';')"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "expression": {
+                        "and": [
+                          {
+                            "not": {
+                              "equals": [
+                                "@items('Apply_to_each_EquipoHoy')?['Correo']\r\n",
+                                "@variables('CorreoCumple')"
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "type": "If"
+                    }
+                  },
+                  "type": "Foreach"
+                },
+                "Send_an_email_(V2)_1": {
+                  "runAfter": {
+                    "Apply_to_each_EquipoHoy": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "emailMessage/To": "@variables('CorreosEquipo')",
+                      "emailMessage/Subject": "🎉 Hoy es el cumpleaños de @{variables('NombreCumple')}",
+                      "emailMessage/Body": "<p class=\"editor-paragraph\">Hola equipo!<br>Hoy @{variables('NombreCumple')} está de cumpleaños 🎂<br>¡No olvidemos saludarlo/a! 🎉</p>",
+                      "emailMessage/Importance": "Normal"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Set_variable_2": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Condition_2": {
+                    "actions": {
+                      "Apply_to_each_Equipo3Dias": {
+                        "foreach": "@outputs('List_rows_present_in_a_table')?['body/value']",
+                        "actions": {
+                          "Condition_3": {
+                            "actions": {
+                              "Append_to_string_variable_1": {
+                                "type": "AppendToStringVariable",
+                                "inputs": {
+                                  "name": "CorreosEquipo",
+                                  "value": "@concat(trim(items('Apply_to_each_Equipo3Dias')?['Correo']), ';')"
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "expression": {
+                              "and": [
+                                {
+                                  "not": {
+                                    "equals": [
+                                      "@items('Apply_to_each_Equipo3Dias')?['Correo']\r\n",
+                                      "@variables('CorreoCumple')"
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            "type": "If"
+                          }
+                        },
+                        "type": "Foreach"
+                      },
+                      "Send_an_email_(V2)": {
+                        "runAfter": {
+                          "Apply_to_each_Equipo3Dias": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "emailMessage/To": "@variables('CorreosEquipo')",
+                            "emailMessage/Subject": "🎉 Cumpleaños en 3 días: @{variables('NombreCumple')}",
+                            "emailMessage/Body": "<p class=\"editor-paragraph\">Hola equipo!<br>En 3 días @{variables('NombreCumple')} cumple años 🎂<br>¡Vayan pensando en un mensajito para celebrarlo/a! 🎉</p>",
+                            "emailMessage/Importance": "Normal"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "connectionName": "shared_office365",
+                            "operationId": "SendEmailV2"
+                          },
+                          "authentication": "@parameters('$authentication')"
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "expression": {
+                      "and": [
+                        {
+                          "equals": [
+                            "@outputs('Compose_FechaCumple')",
+                            "@variables('Fecha3Dias')"
+                          ]
+                        }
+                      ]
+                    },
+                    "type": "If"
+                  }
+                }
+              },
+              "expression": {
+                "or": [
+                  {
+                    "equals": [
+                      "@outputs('Compose_FechaCumple')",
+                      "@variables('FechaHoy')"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            },
+            "Set_variable": {
+              "runAfter": {
+                "Compose_FechaCumple": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "CorreoCumple",
+                "value": "@items('Apply_to_each')?['Correo']"
+              }
+            },
+            "Set_variable_1": {
+              "runAfter": {
+                "Set_variable": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "NombreCumple",
+                "value": "@items('Apply_to_each')?['Personal']"
+              }
+            },
+            "Set_variable_2": {
+              "runAfter": {
+                "Set_variable_1": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "CorreosEquipo",
+                "value": "@string('')"
+              }
+            }
+          },
+          "runAfter": {
+            "List_rows_present_in_a_table": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        },
+        "Initialize_variable_2_CorreoCumple": {
+          "runAfter": {
+            "Initialize_variable_Correo_3_días": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CorreoCumple",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Initialize_variable_3_NombreCumple": {
+          "runAfter": {
+            "Initialize_variable_2_CorreoCumple": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "NombreCumple",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Initialize_variable_1_CorreosEquipo": {
+          "runAfter": {
+            "Initialize_variable_3_NombreCumple": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CorreosEquipo",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "List_rows_present_in_a_table": {
+          "runAfter": {
+            "Initialize_variable_4_FechaHoy": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "tableId": "<table-id>"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "source": "groups/<group-id>",
+              "drive": "<drive-id>",
+              "file": "<file-id>",
+              "table": "<table-id>",
+              "extractSensitivityLabel": false,
+              "fetchSensitivityLabelMetadata": false
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+              "connectionName": "shared_excelonlinebusiness",
+              "operationId": "GetItems"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Initialize_variable_4_FechaHoy": {
+          "runAfter": {
+            "Initialize_variable_1_CorreosEquipo": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "FechaHoy",
+                "type": "string",
+                "value": "@formatDateTime(utcNow(),'MM-dd')"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_office365": {
+        "connectionName": "<conexion-office365>",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "tier": "NotSpecified",
+        "apiName": "office365",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      },
+      "shared_excelonlinebusiness": {
+        "connectionName": "<conexion-excelonlinebusiness>",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness",
+        "tier": "NotSpecified",
+        "apiName": "excelonlinebusiness",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      }
+    },
+    "flowFailureAlertSubscribed": false,
+    "isManaged": false
+  }
+}
