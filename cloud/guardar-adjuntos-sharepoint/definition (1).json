@@ -1,0 +1,120 @@
+{
+  "name": "<flow-id>",
+  "id": "/providers/Microsoft.Flow/flows/<flow-id>",
+  "type": "Microsoft.Flow/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "Guardar reporte diario adjunto en SharePoint",
+    "definition": {
+      "metadata": {},
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_new_email_arrives_(V3)": {
+          "type": "OpenApiConnectionNotification",
+          "inputs": {
+            "parameters": {
+              "from": "<remitente-reportes@proveedor.com>",
+              "includeAttachments": true,
+              "subjectFilter": "REPORTE DIARIO - LOGIN AGENTES",
+              "fetchOnlyWithAttachment": true
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "connectionName": "shared_office365",
+              "operationId": "OnNewEmailV3"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Apply_to_each": {
+          "foreach": "@triggerOutputs()?['body/value']",
+          "actions": {
+            "Apply_to_each_1": {
+              "foreach": "@item()?['attachments']",
+              "actions": {
+                "Condition": {
+                  "actions": {
+                    "Create_file": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://<tenant>.sharepoint.com/sites/<sitio>",
+                          "folderPath": "/Shared Documents/<Carpeta Dashboards>/<Tiempo de conexion>",
+                          "name": "@concat('LOGIN_', formatDateTime(addDays(utcNow(), -1), 'yyyy-MM-dd'), '.xlsx')",
+                          "body": "@base64ToBinary(item()?['contentBytes'])"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "connectionName": "shared_sharepointonline",
+                          "operationId": "CreateFile"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      },
+                      "runtimeConfiguration": {
+                        "contentTransfer": {
+                          "transferMode": "Chunked"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "expression": {
+                    "or": [
+                      {
+                        "startsWith": [
+                          "@item()?['name']",
+                          "REPORTE_DIARIO_"
+                        ]
+                      }
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {},
+          "type": "Foreach"
+        }
+      },
+      "outputs": {},
+      "description": ""
+    },
+    "connectionReferences": {
+      "shared_office365": {
+        "connectionName": "<conexion-office365>",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "tier": "NotSpecified",
+        "apiName": "office365",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      },
+      "shared_sharepointonline": {
+        "connectionName": "<conexion-sharepointonline>",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "tier": "NotSpecified",
+        "apiName": "sharepointonline",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      }
+    },
+    "flowFailureAlertSubscribed": false,
+    "isManaged": false
+  }
+}
