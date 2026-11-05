@@ -33,6 +33,5 @@ Un flujo de Power Automate Cloud que se ejecuta con un clic desde SharePoint y a
 | Archivo | Descripción |
 |---|---|
 | `definition.json` | Definición del flujo (Power Automate Cloud) |
-| `captura.png` | Vista del flujo en el diseñador |
 
 > Versión adaptada para portafolio: sitios de SharePoint, IDs, correos y conexiones fueron reemplazados por marcadores `<...>`. No contiene datos reales de ninguna empresa.
