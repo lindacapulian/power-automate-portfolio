@@ -10,6 +10,7 @@ Automatizaciones que he desarrollado con **Power Automate Desktop** y **Power Au
 |---|---|---|
 | [Reporte de cliente en un clic](desktop/reporte-cliente-un-clic) | Desktop | Exporta datos de Power BI, los procesa con VBA y envía el reporte por Outlook automáticamente |
 | [Aprobación semanal de Notas de Crédito](cloud/aprobacion-notas-credito) | Cloud | Consolida casos de la semana, calcula totales, genera resumen YTD con Office Scripts y envía el correo de aprobación |
+| [Recordatorio de cumpleaños](cloud/recordatorio-cumpleanos) | Cloud | Revisa diariamente una tabla de Excel y avisa al equipo 3 días antes y el mismo día, excluyendo al cumpleañero |
 
 
 ## Herramientas
