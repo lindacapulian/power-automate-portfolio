@@ -25,7 +25,7 @@ Un flujo de Power Automate Desktop que hace todo el proceso con un solo clic:
 | Archivo | Descripción |
 |---|---|
 | `flujo.txt` | Código del flujo (lenguaje de Power Automate Desktop) |
-| `captura.png` | Vista del flujo en el diseñador |
+
 
 ## Cómo usarlo
 1. Abre Power Automate Desktop y crea un flujo nuevo.
