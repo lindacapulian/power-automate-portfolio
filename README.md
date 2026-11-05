@@ -17,4 +17,4 @@ Power Automate Desktop · Power Automate Cloud · SharePoint · Excel · Outlook
 
 ## Sobre mí
 Ingeniera Industrial | Business & BI Analyst  
-[LinkedIn](https://www.linkedin.com/in/lindahenriquez-capulian)
+[LinkedIn](https://www.linkedin.com/in/linda-henriquez-capulian)
